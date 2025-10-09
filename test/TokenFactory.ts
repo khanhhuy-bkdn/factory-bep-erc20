@@ -89,6 +89,19 @@ describe("TokenFactory", function () {
     expect(feeEvent!.args.amount).to.equal(1n);
   });
 
+  it("reverts with FeeTransferFailed when feeRecipient cannot receive", async function () {
+    const [owner, creator] = await ethers.getSigners();
+    const factory = await ethers.deployContract("TokenFactory");
+    const bad = await ethers.deployContract("RevertingReceiver");
+
+    await factory.setCreateFee(1n);
+    await factory.setFeeRecipient(await bad.getAddress());
+
+    await expect(
+      factory.connect(creator).createToken(NAME, SYMBOL, DECIMALS, INITIAL_SUPPLY, CAP, { value: 1n })
+    ).to.be.revertedWithCustomError(factory, "FeeTransferFailed");
+  });
+
   it("reverts on invalid inputs and access control", async function () {
     const [creator] = await ethers.getSigners();
     const factory = await ethers.deployContract("TokenFactory");

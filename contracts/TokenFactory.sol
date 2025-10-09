@@ -25,6 +25,7 @@ contract TokenFactory is Ownable {
     error FeeTooLow();
     error ZeroFeeRecipient();
     error NotAuthorized();
+    error FeeTransferFailed();
 
     // --- Storage ---
     address[] public allTokens;
@@ -79,7 +80,7 @@ contract TokenFactory is Ownable {
         if (msg.value < createFee) revert FeeTooLow();
         if (createFee > 0) {
             (bool sent, ) = payable(feeRecipient).call{value: msg.value}("");
-            require(sent, "Fee transfer failed");
+            if (!sent) revert FeeTransferFailed();
             emit FeeCharged(msg.sender, feeRecipient, msg.value);
         }
 
