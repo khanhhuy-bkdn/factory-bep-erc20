@@ -10,10 +10,26 @@ contract FailingERC20 is IERC20 {
     string public constant symbol = "FAIL";
     uint8 public constant decimals = 18;
 
-    function totalSupply() external pure returns (uint256) { return 0; }
-    function balanceOf(address) external pure returns (uint256) { return 0; }
-    function allowance(address, address) external pure returns (uint256) { return 0; }
-    function approve(address, uint256) external pure returns (bool) { return false; }
-    function transfer(address, uint256) external pure returns (bool) { return false; }
-    function transferFrom(address, address, uint256) external pure returns (bool) { return false; }
+    function totalSupply() external pure returns (uint256) {
+        return 0;
+    }
+    function balanceOf(address) external pure returns (uint256) {
+        return 0;
+    }
+    function allowance(address, address) external pure returns (uint256) {
+        return 0;
+    }
+    function approve(address, uint256) external pure returns (bool) {
+        return false;
+    }
+    function transfer(address, uint256) external pure returns (bool) {
+        return false;
+    }
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external pure returns (bool) {
+        return false;
+    }
 }

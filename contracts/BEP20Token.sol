@@ -7,13 +7,22 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 /**
  * @title Essential BEP20 Token
  * @notice ERC-20 compatible token with configurable decimals, supply cap, mintable, burnable,
  *         pausable transfers, and address blacklist. Includes rescue function for stuck assets.
  */
-contract BEP20Token is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, Ownable {
+contract BEP20Token is
+    ERC20,
+    ERC20Burnable,
+    ERC20Capped,
+    ERC20Pausable,
+    Ownable,
+    AccessControl
+{
+    bytes32 private constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint8 private _customDecimals;
     mapping(address => bool) private _blacklisted;
 
@@ -35,6 +44,8 @@ contract BEP20Token is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, Ownable
         uint256 cap_
     ) ERC20(name_, symbol_) ERC20Capped(cap_) Ownable(owner_) {
         _customDecimals = decimals_;
+        _grantRole(DEFAULT_ADMIN_ROLE, owner_);
+        _grantRole(MINTER_ROLE, owner_);
         // mint initial supply to owner
         if (initialSupply_ > 0) {
             if (initialSupply_ > cap_) revert InitialSupplyExceedsCap();
@@ -47,7 +58,7 @@ contract BEP20Token is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, Ownable
     }
 
     // --- Minting ---
-    function mint(address to, uint256 amount) external onlyOwner {
+    function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         _mint(to, amount); // cap enforced by ERC20Capped
     }
 
@@ -81,7 +92,11 @@ contract BEP20Token is ERC20, ERC20Burnable, ERC20Capped, ERC20Pausable, Ownable
         super._update(from, to, value);
     }
 
-    function rescueTokens(address token, address to, uint256 amount) external onlyOwner {
+    function rescueTokens(
+        address token,
+        address to,
+        uint256 amount
+    ) external onlyOwner {
         if (to == address(0)) revert InvalidRecipient();
         if (token == address(0)) {
             // rescue native BNB

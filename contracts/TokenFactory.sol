@@ -16,7 +16,11 @@ contract TokenFactory is Ownable {
     event FeeRecipientSet(address recipient);
     event PublicCreateSet(bool enabled);
     event AuthorizedCreatorSet(address account, bool value);
-    event FeeCharged(address indexed payer, address indexed recipient, uint256 amount);
+    event FeeCharged(
+        address indexed payer,
+        address indexed recipient,
+        uint256 amount
+    );
 
     // --- Custom Errors ---
     error EmptyName();
@@ -55,7 +59,10 @@ contract TokenFactory is Ownable {
         emit PublicCreateSet(enabled);
     }
 
-    function setAuthorizedCreator(address account, bool value) external onlyOwner {
+    function setAuthorizedCreator(
+        address account,
+        bool value
+    ) external onlyOwner {
         authorizedCreator[account] = value;
         emit AuthorizedCreatorSet(account, value);
     }
@@ -69,7 +76,8 @@ contract TokenFactory is Ownable {
         uint256 cap_
     ) external payable returns (address tokenAddr) {
         // Access control: either public or explicitly authorized
-        if (!publicCreate && !authorizedCreator[msg.sender]) revert NotAuthorized();
+        if (!publicCreate && !authorizedCreator[msg.sender])
+            revert NotAuthorized();
 
         // Input validation
         if (bytes(name_).length == 0) revert EmptyName();
@@ -107,7 +115,10 @@ contract TokenFactory is Ownable {
         return allTokens[index];
     }
 
-    function getTokens(uint256 start, uint256 size) external view returns (address[] memory list) {
+    function getTokens(
+        uint256 start,
+        uint256 size
+    ) external view returns (address[] memory list) {
         uint256 len = allTokens.length;
         if (start >= len) return new address[](0);
         uint256 end = start + size;

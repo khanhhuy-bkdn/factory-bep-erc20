@@ -139,4 +139,87 @@ describe("TokenFactory", function () {
       await factory.createToken(NAME, SYMBOL, DECIMALS, INITIAL_SUPPLY, CAP, { value: 2n })
     ).wait();
   });
+
+  it("integration: factory creates token and exercises mint/burn/transfer/pause/blacklist/cap/roles", async function () {
+    const [creator, user1, user2] = await ethers.getSigners();
+    const factory = await ethers.deployContract("TokenFactory");
+
+    // Create token via factory (defaults: publicCreate true, fee 0)
+    const tx = await factory.connect(creator).createToken(
+      NAME,
+      SYMBOL,
+      DECIMALS,
+      INITIAL_SUPPLY,
+      CAP
+    );
+    await tx.wait();
+
+    // Attach token
+    const count = await factory.getTokenCount();
+    const last = await factory.getTokens(count - 1n, 1n);
+    const tokenAddr = last[0]!;
+    const token = await ethers.getContractAt("BEP20Token", tokenAddr);
+
+    // Initial conditions
+    expect(await token.name()).to.equal(NAME);
+    expect(await token.symbol()).to.equal(SYMBOL);
+    expect(await token.decimals()).to.equal(DECIMALS);
+    expect(await token.balanceOf(creator.address)).to.equal(INITIAL_SUPPLY);
+
+    // Mint (creator has MINTER_ROLE by default)
+    await token.connect(creator).mint(creator.address, 10n);
+    expect(await token.balanceOf(creator.address)).to.equal(INITIAL_SUPPLY + 10n);
+
+    // Burn (direct)
+    await token.connect(creator).burn(5n);
+    expect(await token.balanceOf(creator.address)).to.equal(INITIAL_SUPPLY + 5n);
+
+    // Transfer
+    await token.connect(creator).transfer(user1.address, 3n);
+    expect(await token.balanceOf(user1.address)).to.equal(3n);
+
+    // BurnFrom via allowance
+    await token.connect(user1).approve(creator.address, 2n);
+    await token.connect(creator).burnFrom(user1.address, 2n);
+    expect(await token.balanceOf(user1.address)).to.equal(1n);
+
+    // Pause/unpause flow
+    await token.connect(creator).pause();
+    await expect(token.connect(creator).transfer(user2.address, 1n))
+      .to.be.revertedWithCustomError(token, "EnforcedPause");
+    await token.connect(creator).unpause();
+    await token.connect(creator).transfer(user2.address, 1n);
+    expect(await token.balanceOf(user2.address)).to.equal(1n);
+
+    // Blacklist: recipient blocked
+    await token.connect(creator).setBlacklist(user1.address, true);
+    await expect(token.connect(creator).transfer(user1.address, 1n))
+      .to.be.revertedWithCustomError(token, "RecipientBlacklisted");
+    await token.connect(creator).setBlacklist(user1.address, false);
+
+    // Blacklist: sender blocked
+    await token.connect(creator).setBlacklist(creator.address, true);
+    await expect(token.connect(creator).transfer(user1.address, 1n))
+      .to.be.revertedWithCustomError(token, "SenderBlacklisted");
+    await token.connect(creator).setBlacklist(creator.address, false);
+
+    // Roles: revoke creator minter, expect mint to fail; grant to user2 and mint within cap
+    const MINTER_ROLE = ethers.id("MINTER_ROLE");
+    await token.connect(creator).revokeRole(MINTER_ROLE, creator.address);
+    await expect(token.connect(creator).mint(creator.address, 1n))
+      .to.be.revertedWithCustomError(token, "AccessControlUnauthorizedAccount")
+      .withArgs(creator.address, MINTER_ROLE);
+
+    await token.connect(creator).grantRole(MINTER_ROLE, user2.address);
+    await token.connect(user2).mint(user2.address, 2n);
+    expect(await token.balanceOf(user2.address)).to.equal(3n);
+
+    // Cap enforcement (performed by an account with MINTER_ROLE)
+    const remaining = CAP - (await token.totalSupply());
+    if (remaining > 0n) {
+      await token.connect(user2).mint(user2.address, remaining);
+    }
+    await expect(token.connect(user2).mint(user2.address, 1n))
+      .to.be.revertedWithCustomError(token, "ERC20ExceededCap");
+  });
 });

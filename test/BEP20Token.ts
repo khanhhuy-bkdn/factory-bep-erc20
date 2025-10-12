@@ -130,6 +130,32 @@ describe("BEP20Token", function () {
     ).to.be.revertedWithCustomError(token, "RecipientBlacklisted");
   });
 
+  it("requires MINTER_ROLE to mint", async function () {
+    const [deployer, other] = await ethers.getSigners();
+    const token = await ethers.deployContract("BEP20Token", [
+      NAME,
+      SYMBOL,
+      DECIMALS,
+      INITIAL_SUPPLY,
+      deployer.address,
+      CAP,
+    ]);
+
+    // other is not a minter → should revert with AccessControlUnauthorizedAccount
+    const MINTER_ROLE = ethers.id("MINTER_ROLE");
+    await expect(
+      token.connect(other).mint(other.address, 1n)
+    ).to.be.revertedWithCustomError(token, "AccessControlUnauthorizedAccount").withArgs(
+      other.address,
+      MINTER_ROLE
+    );
+
+    // grant role and mint succeeds
+    await token.grantRole(MINTER_ROLE, other.address);
+    await token.connect(other).mint(other.address, 1n);
+    expect(await token.balanceOf(other.address)).to.equal(1n);
+  });
+
   it("rescues native coin to recipient", async function () {
     const [deployer, recipient] = await ethers.getSigners();
     const token = await ethers.deployContract("BEP20Token", [
