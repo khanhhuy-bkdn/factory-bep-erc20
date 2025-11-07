@@ -242,6 +242,6 @@ describe("BEP20Token", function () {
     const failing = await ethers.deployContract("FailingERC20");
     await expect(
       token.rescueTokens(await failing.getAddress(), deployer.address, 1n)
-    ).to.be.revertedWithCustomError(token, "TokenTransferFailed");
+    ).to.be.revertedWithCustomError(token, "SafeERC20FailedOperation");
   });
 });

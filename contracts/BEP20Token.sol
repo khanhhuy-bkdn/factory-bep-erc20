@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -22,6 +23,7 @@ contract BEP20Token is
     Ownable,
     AccessControl
 {
+    using SafeERC20 for IERC20;
     bytes32 private constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint8 private _customDecimals;
     mapping(address => bool) private _blacklisted;
@@ -102,8 +104,7 @@ contract BEP20Token is
             // rescue native BNB
             payable(to).transfer(amount);
         } else {
-            bool ok = IERC20(token).transfer(to, amount);
-            if (!ok) revert TokenTransferFailed();
+            IERC20(token).safeTransfer(to, amount);
         }
     }
 
