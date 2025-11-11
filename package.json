@@ -2,6 +2,14 @@
   "name": "factory-token",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy-nexst-testnet": "hardhat ignition deploy ./ignition/modules/NEXST.ts --network bscTestnet",
+    "deploy-nexst-mainnet": "hardhat ignition deploy ./ignition/modules/NEXST.ts --network bsc",
+    "verify-nexst-testnet": "npx hardhat verify --network bscTestnet --constructor-args-path constructor-args/nexst-args.ts",
+    "verify-nexst-mainnet": "npx hardhat verify --network bsc --constructor-args-path constructor-args/nexst-args.ts"
+  },
   "devDependencies": {
     "@nomicfoundation/hardhat-ignition": "^3.0.3",
     "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.0",
